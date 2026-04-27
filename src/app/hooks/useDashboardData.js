@@ -1,17 +1,18 @@
 import { useState, useEffect } from 'react'
+import { mockDashboard } from '../mock/dashboard'
 
-const URL = 'https://n8n.learningbrands.cloud/webhook-test/sales'
+const API_URL = 'https://n8n.learningbrands.cloud/webhook-test/statistic'
 
-export function useVendasData() {
+export function useDashboardData() {
   const [data, setData]       = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState(null)
 
   useEffect(() => {
-    fetch(URL)
+    fetch(API_URL)
       .then(r => { if (!r.ok) throw new Error(r.statusText); return r.json() })
-      .then(d  => { setData(d);  setLoading(false) })
-      .catch(e => { setError(e); setLoading(false) })
+      .then(d  => { setData(d);             setLoading(false) })
+      .catch(() => { setData(mockDashboard); setLoading(false) })
   }, [])
 
   return { data, loading, error }
