@@ -2,6 +2,8 @@ import { useState, useMemo } from 'react'
 import { Icon } from '../../components/Charts'
 import { FilterBar } from '../../components/Filters'
 import { useDashboardData } from '../../hooks/useDashboardData'
+import { useUserInfo } from '../../hooks/useUserInfo'
+import { useSalesGoals } from '../../hooks/useSalesGoals'
 
 function currency(n) { return 'R$ ' + n.toLocaleString('pt-BR', { maximumFractionDigits: 0 }) }
 function kmoney(n) {
@@ -9,6 +11,17 @@ function kmoney(n) {
   return 'R$ ' + (n / 1000).toFixed(0) + 'k'
 }
 function num(n) { return n.toLocaleString('pt-BR') }
+
+function daysRemainingInMonth() {
+  const now   = new Date()
+  const last  = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+  return Math.max(last.getDate() - now.getDate(), 1)
+}
+
+function calcDelta(curr, prev) {
+  if (!prev || prev === 0) return null
+  return ((curr - prev) / prev) * 100
+}
 
 function OpCard({ icon, label, value, meta, unit, accent = 'var(--b-500)', delay = 0 }) {
   const pct = meta > 0 ? (value / meta) * 100 : 0
@@ -54,43 +67,114 @@ function Loading() {
   return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: 'var(--n-400)', fontSize: 14 }}>Carregando...</div>
 }
 
+function UserAvatar({ user, className = 'avatar' }) {
+  if (user?.imageUrl) {
+    return <img className={`${className} avatar-img`} src={user.imageUrl} alt={user.nome} />
+  }
+  const initials = user?.nome?.split(' ').map(w => w[0]).slice(0, 2).join('') || '??'
+  return <div className={className} style={user?.cor ? { background: user.cor } : {}}>{initials}</div>
+}
+
 export default function App() {
-  const { data, loading, error } = useDashboardData()
-  const [topPeriod, setTopPeriod]   = useState('mes')
-  const [opsPeriod, setOpsPeriod]   = useState('mes')
-  const [vendorFilter, setVendorFilter] = useState('todos')
-  const [hallMode, setHallMode]     = useState('closer')
+  const { data, prevData, loading }  = useDashboardData()
+  const { users, closers, sdrs }     = useUserInfo()
+  const { goals }                    = useSalesGoals()
+  const [opsPeriod, setOpsPeriod]    = useState('mes')
+  const [hallMode, setHallMode]      = useState('closer')
 
   if (loading) return <Loading />
-  if (error || !data) return <div style={{ padding: 40, color: 'var(--danger)' }}>Erro ao carregar dados.</div>
+  if (!data)   return <div style={{ padding: 40, color: 'var(--danger)' }}>Erro ao carregar dados.</div>
 
-  const {
-    VENDEDORES        = [],
-    RANKING_COTA      = [],
-    CLOSER_OPS        = {},
-    SDRS              = [],
-    SDR_RANKING       = [],
-    OPS_METRICS       = {},
-    META_TOTAL        = 0,
-    META_ATINGIDA     = 0,
-    GESTAO_VISUAL     = [],
-    GESTAO_ESTRATEGICA= [],
-  } = data
+  // /sales/goals is source of truth for monthly metrics and targets
+  const META_TOTAL    = goals?.meta_total    ?? data.META_TOTAL    ?? 0
+  const META_ATINGIDA = goals?.meta_atingida ?? data.META_ATINGIDA ?? 0
+  const RANKING_COTA  = goals?.RANKING_COTA  ?? data.RANKING_COTA  ?? []
+  const OPS_METRICS   = goals?.OPS_METRICS   ?? data.OPS_METRICS   ?? {}
 
-  const vendorById = Object.fromEntries(VENDEDORES.map(v => [v.id, v]))
-  const sdrById    = Object.fromEntries(SDRS.map(v => [v.id, v]))
+  const PREV_META_ATINGIDA = prevData?.META_ATINGIDA ?? null
+  const deltaPct = calcDelta(META_ATINGIDA, PREV_META_ATINGIDA)
 
-  const ranking    = [...RANKING_COTA].sort((a, b) => b.pct - a.pct)
+  const currentUser = users[0] || null
+
+  // name → id map from /user/info for joining with /statistic response (which uses Nome)
+  const nameToId = useMemo(
+    () => Object.fromEntries(users.map(u => [u.nome.toLowerCase(), u.id])),
+    [users]
+  )
+
+  // Build CLOSER_OPS from real API rawClosers, fallback to mock CLOSER_OPS
+  const CLOSER_OPS = useMemo(() => {
+    if (data.rawClosers?.length > 0) {
+      const map = {}
+      data.rawClosers.forEach(c => {
+        const id = nameToId[c.Nome?.toLowerCase()] || c.Nome?.toLowerCase()
+        if (!id) return
+        map[id] = {
+          la:  0,                              // not in API response
+          lr:  c['Ligações\nRealizadas']  ?? 0,
+          ra:  c['Reuniões\nAgendadas']   ?? 0,
+          rr:  c['Reuniões\nRealizadas']  ?? 0,
+          ind: c['Indicações']            ?? 0,
+        }
+      })
+      return map
+    }
+    return data.CLOSER_OPS ?? {}
+  }, [data, nameToId])
+
+  // Build SDR_RANKING from real API rawSdrs, fallback to mock SDR_RANKING
+  const SDR_RANKING = useMemo(() => {
+    if (data.rawSdrs?.length > 0) {
+      return data.rawSdrs.map(s => {
+        const id  = nameToId[s.Nome?.toLowerCase()] || s.Nome?.toLowerCase()
+        const con = s['Conexões\nEnviadas']   ?? 0
+        const ace = s['Conexões\nAceitas']    ?? 0
+        const inm = s['InMails\nEnviados']    ?? 0
+        const fup = s['Follow-ups']           ?? 0
+        const num = s['Números\nCaptados']    ?? 0
+        const lig = s['Ligações\nAgendadas']  ?? 0
+        const ind = s['Indicações\nCaptadas'] ?? 0
+        const abordagens = s['Abordagens']    ?? 0
+        // score: weighted activity sum
+        const score = lig * 3 + ind * 2 + num * 1 + ace * 0.5 + abordagens * 0.3
+        return { id, con, ace, inm, fup, numeros: num, ligacoes: lig, reunioes: 0, indicacoes: ind, score }
+      })
+    }
+    return data.SDR_RANKING ?? []
+  }, [data, nameToId])
+
+  // Prefer real user data from /user/info for display
+  const allUserById = useMemo(() => Object.fromEntries(users.map(u => [u.id, u])), [users])
+  const vendorById  = useMemo(
+    () => closers.length > 0
+      ? Object.fromEntries(closers.map(u => [u.id, u]))
+      : Object.fromEntries((data.VENDEDORES ?? []).map(v => [v.id, v])),
+    [closers, data]
+  )
+  const sdrById = useMemo(
+    () => sdrs.length > 0
+      ? Object.fromEntries(sdrs.map(u => [u.id, u]))
+      : Object.fromEntries((data.SDRS ?? []).map(v => [v.id, v])),
+    [sdrs, data]
+  )
+
+  const ranking     = useMemo(() => [...RANKING_COTA].sort((a, b) => b.pct - a.pct), [RANKING_COTA])
   const rankingTop3 = ranking.slice(0, 3)
-  const sdrTop3    = [...SDR_RANKING].sort((a, b) => b.score - a.score).slice(0, 3)
+  const sdrTop3     = useMemo(() => [...SDR_RANKING].sort((a, b) => b.score - a.score).slice(0, 3), [SDR_RANKING])
 
-  const ops = OPS_METRICS[opsPeriod] || {}
+  const ops    = OPS_METRICS[opsPeriod] || {}
   const metaPct = META_TOTAL > 0 ? (META_ATINGIDA / META_TOTAL) * 100 : 0
+
+  const totalVendasMes = ops.vendas?.realizado ?? 0
+  const ritmodiario    = (META_TOTAL - META_ATINGIDA) / daysRemainingInMonth()
 
   const hallData      = hallMode === 'closer' ? rankingTop3 : sdrTop3
   const hallPeople    = hallMode === 'closer' ? vendorById  : sdrById
-  const hallMetric    = hallMode === 'closer' ? (r) => `${r.pct.toFixed(1)}%`    : (r) => `${r.score.toFixed(1)} pts`
-  const hallSubMetric = hallMode === 'closer' ? (r) => kmoney(r.fat)             : (r) => `${r.reunioes} reuniões`
+  const hallMetric    = hallMode === 'closer' ? (r) => `${r.pct.toFixed(1)}%`  : (r) => `${r.score.toFixed(1)} pts`
+  const hallSubMetric = hallMode === 'closer' ? (r) => kmoney(r.fat)           : (r) => `${r.reunioes} reuniões`
+
+  // Current month label
+  const mesLabel = new Date().toLocaleString('pt-BR', { month: 'long', year: 'numeric' })
 
   return (
     <div className="dash">
@@ -109,10 +193,10 @@ export default function App() {
             <button className="btn-icon" title="Notificações"><Icon name="bell" /></button>
             <button className="btn-icon" title="Configurações"><Icon name="settings" /></button>
             <div className="user">
-              <div className="avatar">AM</div>
+              <UserAvatar user={currentUser} className="avatar" />
               <div className="who">
-                <div className="name">Ana Martins</div>
-                <div className="role">Gerente comercial</div>
+                <div className="name">{currentUser?.nome || '—'}</div>
+                <div className="role">{currentUser?.cargo || ''}</div>
               </div>
             </div>
           </div>
@@ -123,7 +207,7 @@ export default function App() {
         <div className="head">
           <div>
             <h1>Visão geral</h1>
-            <div className="sub">Central de comando comercial · Abril, 2026</div>
+            <div className="sub">Central de comando comercial · {mesLabel}</div>
           </div>
         </div>
 
@@ -135,10 +219,17 @@ export default function App() {
             <div className="eyebrow">Meta do mês · Fat. líquido</div>
             <div className="hero-value num">{currency(META_ATINGIDA)}</div>
             <div className="hero-sub">
-              <span className="delta up"><Icon name="arrow_up" size={10} />12,4%</span>
-              vs. mês anterior
-              <span className="dot-sep" />
-              <span className="num">{num(ranking.reduce((s, r) => s + (GESTAO_VISUAL.find(x => x.id === r.id)?.venda || 0) + (GESTAO_ESTRATEGICA.find(x => x.id === r.id)?.venda || 0), 0))} vendas no mês</span>
+              {deltaPct !== null && (
+                <>
+                  <span className={`delta ${deltaPct >= 0 ? 'up' : 'down'}`}>
+                    <Icon name={deltaPct >= 0 ? 'arrow_up' : 'arrow_down'} size={10} />
+                    {Math.abs(deltaPct).toFixed(1)}%
+                  </span>
+                  vs. mês anterior
+                  <span className="dot-sep" />
+                </>
+              )}
+              <span className="num">{num(totalVendasMes)}</span> vendas no mês
             </div>
             <div className="hero-bar">
               <div className="hero-fill" style={{ width: `${Math.min(metaPct, 100)}%` }} />
@@ -148,7 +239,7 @@ export default function App() {
               <div><div className="lbl">Atingido</div><div className="val num">{metaPct.toFixed(1)}%</div></div>
               <div><div className="lbl">Falta</div><div className="val num">{kmoney(META_TOTAL - META_ATINGIDA)}</div></div>
               <div><div className="lbl">Meta</div><div className="val num">{kmoney(META_TOTAL)}</div></div>
-              <div><div className="lbl">Ritmo diário necessário</div><div className="val num">{kmoney((META_TOTAL - META_ATINGIDA) / 7)}</div></div>
+              <div><div className="lbl">Ritmo diário necessário</div><div className="val num">{kmoney(ritmodiario)}</div></div>
             </div>
           </div>
 
@@ -191,12 +282,12 @@ export default function App() {
                 if (!r) return <div key={pos} />
                 const p = hallPeople[r.id]
                 if (!p) return <div key={pos} />
-                const isFirst = idx === 0
+                const isFirst  = idx === 0
                 const rankLabel = idx === 0 ? '1º' : idx === 1 ? '2º' : '3º'
                 return (
                   <div key={pos} className={'hp' + (isFirst ? ' first' : '')}>
-                    <div className="hp-av" style={{ background: p.cor }}>
-                      {p.avatar}
+                    <div className="hp-av-wrap">
+                      <UserAvatar user={p} className="hp-av" />
                       <span className="hp-rank">{rankLabel}</span>
                     </div>
                     <div className="hp-name">{p.nome.split(' ')[0]}</div>
@@ -255,7 +346,7 @@ export default function App() {
               </thead>
               <tbody>
                 {ranking.map((r, i) => {
-                  const v = vendorById[r.id]
+                  const v    = vendorById[r.id] || allUserById[r.id]
                   if (!v) return null
                   const ops2 = CLOSER_OPS[r.id] || {}
                   const pctClamped = Math.min(r.pct, 150)
@@ -266,7 +357,7 @@ export default function App() {
                       <td className="num" style={{ color: 'var(--n-400)', paddingLeft: 24 }}>{String(i + 1).padStart(2, '0')}</td>
                       <td>
                         <div className="chip-avatar">
-                          <div className="av" style={{ background: v.cor }}>{v.avatar}</div>
+                          <UserAvatar user={v} className="av" />
                           {v.nome}
                         </div>
                       </td>
@@ -336,7 +427,7 @@ export default function App() {
               </thead>
               <tbody>
                 {[...SDR_RANKING].sort((a, b) => b.ligacoes - a.ligacoes).map((r, i) => {
-                  const s = sdrById[r.id]
+                  const s    = sdrById[r.id] || allUserById[r.id]
                   if (!s) return null
                   const acePct = r.con > 0 ? (r.ace / r.con) * 100 : 0
                   return (
@@ -344,7 +435,7 @@ export default function App() {
                       <td className="num" style={{ color: 'var(--n-400)', paddingLeft: 24 }}>{String(i + 1).padStart(2, '0')}</td>
                       <td>
                         <div className="chip-avatar">
-                          <div className="av" style={{ background: s.cor }}>{s.avatar}</div>
+                          <UserAvatar user={s} className="av" />
                           {s.nome}
                         </div>
                       </td>
@@ -361,7 +452,7 @@ export default function App() {
                       <td className="right c-op num" style={{ color: 'var(--n-700)' }}>{r.indicacoes}</td>
                       <td className="right c-op"><span className="la-pill num">{r.ligacoes}</span></td>
                       <td className="right" style={{ paddingRight: 24 }}>
-                        <span className="score-chip num">{r.score.toFixed(1)}</span>
+                        <span className="score-chip num">{r.score?.toFixed(1)}</span>
                       </td>
                     </tr>
                   )
