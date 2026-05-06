@@ -14,15 +14,27 @@
  */
 
 /**
- * @typedef {Object} TeamGoalsDTO
+ * @typedef {Object} TeamGoalsSdrDTO
+ * @property {number} conexoes_enviadas
+ * @property {number} conexoes_aceitas
+ * @property {number} abordagens
+ * @property {number} inMails_enviados
+ * @property {number} follow_ups
  * @property {number} numeros_captados
  * @property {number} ligacoes_agendadas
+ * @property {number} indicacoes_captadas
+ */
+
+/**
+ * @typedef {Object} TeamGoalsCloserDTO
+ * @property {number} ligacoes_realizadas
  * @property {number} reunioes_agendadas
+ * @property {number} reunioes_realizadas
  * @property {number} indicacoes
  */
 
 /** @typedef {{ data: SalesGoalsDTO[] }} GoalsResponseDTO */
 
-/** @typedef {{ data: TeamGoalsDTO[] }} TeamGoalsResponseDTO */
+/** @typedef {{ SDR: TeamGoalsSdrDTO, Closer: TeamGoalsCloserDTO }} TeamGoalsResponseDTO */
 
 export const EMPTY_TEAM_GOALS = Object.freeze({ SDR: {}, Closer: {} })

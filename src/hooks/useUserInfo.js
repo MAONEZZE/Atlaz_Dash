@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react'
 import { apiGet } from '../lib/apiClient'
 
 function normalizeUser(u) {
+  const cargo = u.cargo ? u.cargo.charAt(0).toUpperCase() + u.cargo.slice(1) : u.cargo
   return {
     id:       u.id,
     nome:     u.nome,
     imageUrl: u.imagem_url || null,
-    cargo:    u.cargo,
+    cargo,
   }
 }
 

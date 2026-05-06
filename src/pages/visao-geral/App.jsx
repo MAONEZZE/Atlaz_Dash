@@ -237,10 +237,10 @@ export default function App() {
             </div>
           </div>
           <div className="ops-grid stg" style={{ marginBottom: 28 }}>
-            <OpCard icon="hash"  label="Números captados"    value={sdrTotals.numeros_captados    ?? 0} meta={sdrGoalTotals.numeros    ?? 0} accent="#10B981" delay={40}  />
+            <OpCard icon="hash"  label="Números captados"    value={sdrTotals.numeros_captados     ?? 0} meta={sdrGoalTotals.numeros    ?? 0} accent="#10B981" delay={40}  />
             <OpCard icon="phone" label="Ligações agendadas"  value={sdrTotals.ligacoes_agendadas  ?? 0} meta={sdrGoalTotals.ligacoes   ?? 0} accent="#2551D8" delay={100} />
-            <OpCard icon="cal"   label="Reuniões agendadas"  value={sdrTotals.reunioes_agendadas  ?? 0} meta={sdrGoalTotals.reunioes   ?? 0} accent="#3B6EF0" delay={160} />
-            <OpCard icon="share" label="Indicações captadas" value={sdrTotals.indicacoes          ?? 0} meta={sdrGoalTotals.indicacoes ?? 0} accent="#8B5CF6" delay={220} />
+            <OpCard icon="users" label="Abordagens"          value={sdrTotals.abordagens          ?? 0} meta={0}                              accent="#3B6EF0" delay={160} />
+            <OpCard icon="share" label="Indicações captadas" value={sdrTotals.indicacoes_captadas ?? 0} meta={sdrGoalTotals.indicacoes ?? 0} accent="#8B5CF6" delay={220} />
           </div>
 
           {/* Row 3 — Ranking Closers */}
