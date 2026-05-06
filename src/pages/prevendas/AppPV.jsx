@@ -299,26 +299,29 @@ export default function AppPV() {
               })}
             </div>
 
-            <div className="section-head">
-              <div>
-                <div className="eyebrow">Funil de {canal.nome}</div>
-                <h2 className="section-title">Conversão etapa a etapa</h2>
-              </div>
-              <div className="hint">
-                Topo · <span className="num" style={{ color: 'var(--n-900)', fontWeight: 500 }}>{fmtPV(canal.etapas[0].v)}</span>
-                {' · '} Fechamento · <span className="num" style={{ color: 'var(--n-900)', fontWeight: 500 }}>{fmtPV(canal.etapas[canal.etapas.length - 1].v)}</span>
-              </div>
-            </div>
-            <div className="card span-12 fnl-block stg" style={{ marginBottom: 28 }}>
-              <div className="fnl-grid">
-                <FunnelDynamic canal={canal} />
-                <CanalAnalytics canal={canal} />
-              </div>
-            </div>
-
-            <div className="grid stg" style={{ marginBottom: 28 }}>
-              <EtapasTable canal={canal} />
-            </div>
+            {canal.etapas.length > 0 && (
+              <>
+                <div className="section-head">
+                  <div>
+                    <div className="eyebrow">Funil de {canal.nome}</div>
+                    <h2 className="section-title">Conversão etapa a etapa</h2>
+                  </div>
+                  <div className="hint">
+                    Topo · <span className="num" style={{ color: 'var(--n-900)', fontWeight: 500 }}>{fmtPV(canal.etapas[0].v)}</span>
+                    {' · '} Fechamento · <span className="num" style={{ color: 'var(--n-900)', fontWeight: 500 }}>{fmtPV(canal.etapas[canal.etapas.length - 1].v)}</span>
+                  </div>
+                </div>
+                <div className="card span-12 fnl-block stg" style={{ marginBottom: 28 }}>
+                  <div className="fnl-grid">
+                    <FunnelDynamic canal={canal} />
+                    <CanalAnalytics canal={canal} />
+                  </div>
+                </div>
+                <div className="grid stg" style={{ marginBottom: 28 }}>
+                  <EtapasTable canal={canal} />
+                </div>
+              </>
+            )}
           </>
         )}
       </main>

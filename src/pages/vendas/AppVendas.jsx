@@ -238,7 +238,7 @@ export default function AppVendas() {
     RECEITA_POR_CANAL = [],
     FIN_BREAKDOWN     = [],
     TABELA_FIN_MENSAL = {},
-  } = data
+  } = data ?? {}
 
   return (
     <DataState loading={loading} error={error} onRetry={refetch}>
