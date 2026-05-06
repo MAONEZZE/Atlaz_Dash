@@ -83,10 +83,12 @@ async function request(method, path, { params, body, signal, headers } = {}) {
   return parseJsonOrThrow(response)
 }
 
+// params positional arg takes priority over options
 export function apiGet(path, params, options = {}) {
   return request('GET', path, { ...options, params })
 }
 
+// body positional arg takes priority over options
 export function apiPost(path, body, options = {}) {
   return request('POST', path, { ...options, body })
 }
