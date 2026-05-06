@@ -20,9 +20,9 @@ export class ValidationError extends ApiError {
 }
 
 function buildUrl(path, params) {
-  const base = BASE_URL || ''
   const cleanPath = path.startsWith('/') ? path : `/${path}`
-  const url = new URL(`${base}${cleanPath}`, base ? undefined : window.location.origin)
+  // Always pass window.location.origin as base — ignored when BASE_URL is absolute
+  const url = new URL(`${BASE_URL}${cleanPath}`, window.location.origin)
   if (params) {
     for (const [key, value] of Object.entries(params)) {
       if (value === undefined || value === null || value === '') continue
