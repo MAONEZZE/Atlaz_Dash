@@ -1,6 +1,7 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { Icon } from '../../components/Charts'
 import { FilterBar } from '../../components/Filters'
+import { DataState } from '../../components/DataState'
 import { usePrevendasData } from '../../hooks/usePrevendasData'
 
 function fmtPV(n) { return n.toLocaleString('pt-BR') }
@@ -210,25 +211,16 @@ function EtapasTable({ canal }) {
   )
 }
 
-function Loading() {
-  return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: 'var(--n-400)', fontSize: 14 }}>Carregando...</div>
-}
-
 export default function AppPV() {
-  const { data, loading, error } = usePrevendasData()
+  const { data, loading, error, refetch } = usePrevendasData()
   const [canalId, setCanalId] = useState('linkedin')
 
-  if (loading) return <Loading />
-  if (error || !data) return <div style={{ padding: 40, color: 'var(--danger)' }}>Erro ao carregar dados.</div>
-
-  const { FUNIS_POR_CANAL = {} } = data
-
+  const { FUNIS_POR_CANAL = {} } = data ?? {}
   const canal  = FUNIS_POR_CANAL[canalId] || Object.values(FUNIS_POR_CANAL)[0]
-  if (!canal) return <div style={{ padding: 40 }}>Nenhum canal disponível.</div>
-
-  const lookup = Object.fromEntries(canal.etapas.map(e => [e.id, e.v]))
+  const lookup = canal ? Object.fromEntries(canal.etapas.map(e => [e.id, e.v])) : {}
 
   return (
+    <DataState loading={loading} error={error} onRetry={refetch}>
     <div className="dash">
       <header className="topbar">
         <div className="topbar-inner">
@@ -282,51 +274,55 @@ export default function AppPV() {
               </button>
             ))}
           </div>
-          <div className="canal-desc">{canal.sub}</div>
+          <div className="canal-desc">{canal?.sub}</div>
         </div>
 
-        <div className="section-head" style={{ marginTop: 4 }}>
-          <div>
-            <div className="eyebrow">Indicadores · {canal.nome}</div>
-            <h2 className="section-title">Principais números do canal</h2>
-          </div>
-          <div className="hint">{canal.kpis.length} métricas</div>
-        </div>
-        <div className="pv-kpi-grid stg" style={{ marginBottom: 28 }}>
-          {canal.kpis.map((k, i) => {
-            let value = lookup[k.id]
-            if (value === undefined && k.auxRef && canal.aux) {
-              if (k.auxRef === 'followups') value = canal.aux.blocos[0].v
-              else {
-                const aux = canal.aux.blocos.find(b => b.l.toLowerCase().includes(k.auxRef))
-                value = aux ? aux.v : 0
-              }
-            }
-            return <PVKpi key={k.id} label={k.l} value={value ?? 0} meta={k.meta} cor={canal.cor} delay={i * 40} />
-          })}
-        </div>
+        {canal && (
+          <>
+            <div className="section-head" style={{ marginTop: 4 }}>
+              <div>
+                <div className="eyebrow">Indicadores · {canal.nome}</div>
+                <h2 className="section-title">Principais números do canal</h2>
+              </div>
+              <div className="hint">{canal.kpis.length} métricas</div>
+            </div>
+            <div className="pv-kpi-grid stg" style={{ marginBottom: 28 }}>
+              {canal.kpis.map((k, i) => {
+                let value
+                if (k.auxRef != null && canal.aux) {
+                  const bloco = canal.aux.blocos.find(b => b.l.toLowerCase().includes(k.auxRef))
+                  value = bloco?.v ?? 0
+                } else {
+                  value = lookup[k.id] ?? 0
+                }
+                return <PVKpi key={k.id} label={k.l} value={value} meta={k.meta} cor={canal.cor} delay={i * 40} />
+              })}
+            </div>
 
-        <div className="section-head">
-          <div>
-            <div className="eyebrow">Funil de {canal.nome}</div>
-            <h2 className="section-title">Conversão etapa a etapa</h2>
-          </div>
-          <div className="hint">
-            Topo · <span className="num" style={{ color: 'var(--n-900)', fontWeight: 500 }}>{fmtPV(canal.etapas[0].v)}</span>
-            {' · '} Fechamento · <span className="num" style={{ color: 'var(--n-900)', fontWeight: 500 }}>{fmtPV(canal.etapas[canal.etapas.length - 1].v)}</span>
-          </div>
-        </div>
-        <div className="card span-12 fnl-block stg" style={{ marginBottom: 28 }}>
-          <div className="fnl-grid">
-            <FunnelDynamic canal={canal} />
-            <CanalAnalytics canal={canal} />
-          </div>
-        </div>
+            <div className="section-head">
+              <div>
+                <div className="eyebrow">Funil de {canal.nome}</div>
+                <h2 className="section-title">Conversão etapa a etapa</h2>
+              </div>
+              <div className="hint">
+                Topo · <span className="num" style={{ color: 'var(--n-900)', fontWeight: 500 }}>{fmtPV(canal.etapas[0].v)}</span>
+                {' · '} Fechamento · <span className="num" style={{ color: 'var(--n-900)', fontWeight: 500 }}>{fmtPV(canal.etapas[canal.etapas.length - 1].v)}</span>
+              </div>
+            </div>
+            <div className="card span-12 fnl-block stg" style={{ marginBottom: 28 }}>
+              <div className="fnl-grid">
+                <FunnelDynamic canal={canal} />
+                <CanalAnalytics canal={canal} />
+              </div>
+            </div>
 
-        <div className="grid stg" style={{ marginBottom: 28 }}>
-          <EtapasTable canal={canal} />
-        </div>
+            <div className="grid stg" style={{ marginBottom: 28 }}>
+              <EtapasTable canal={canal} />
+            </div>
+          </>
+        )}
       </main>
     </div>
+    </DataState>
   )
 }
