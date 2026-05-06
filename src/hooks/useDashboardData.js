@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react'
 import { loadFilters } from '../components/Filters'
-import { mockDashboard } from '../mock/dashboard'
-
-const API_URL = 'https://n8n.learningbrands.cloud/webhook-test/statistic'
+import { apiGet } from '../lib/apiClient'
 
 const CANAL_LABEL = {
   linkedin:  'Linkedin',
@@ -12,101 +10,90 @@ const CANAL_LABEL = {
   outros:    'Outros',
 }
 
-function buildFilterBody(filters) {
+function buildFilterParams(filters) {
   const now = Date.now()
-  const body = {}
+  const params = {}
 
   switch (filters.period) {
     case 'dia': {
       const today = new Date(); today.setHours(0, 0, 0, 0)
-      body.start_date = today.getTime()
-      body.end_date   = now
+      params.data_inicio = today.getTime()
+      params.data_fim    = now
       break
     }
     case 'semana':
-      body.start_date = now - 7 * 24 * 60 * 60 * 1000
-      body.end_date   = now
+      params.data_inicio = now - 7 * 24 * 60 * 60 * 1000
+      params.data_fim    = now
       break
     case 'mes': {
       const d = new Date(); d.setDate(1); d.setHours(0, 0, 0, 0)
-      body.start_date = d.getTime()
-      body.end_date   = now
+      params.data_inicio = d.getTime()
+      params.data_fim    = now
       break
     }
     case 'trim': {
       const d = new Date(); d.setMonth(d.getMonth() - 3)
-      body.start_date = d.getTime()
-      body.end_date   = now
+      params.data_inicio = d.getTime()
+      params.data_fim    = now
       break
     }
     case 'sem': {
       const d = new Date(); d.setMonth(d.getMonth() - 6)
-      body.start_date = d.getTime()
-      body.end_date   = now
+      params.data_inicio = d.getTime()
+      params.data_fim    = now
       break
     }
     case 'ano': {
       const d = new Date(); d.setFullYear(d.getFullYear() - 1)
-      body.start_date = d.getTime()
-      body.end_date   = now
+      params.data_inicio = d.getTime()
+      params.data_fim    = now
       break
     }
     case 'custom':
-      if (filters.dateRange?.start) body.start_date = filters.dateRange.start
-      if (filters.dateRange?.end)   body.end_date   = filters.dateRange.end
+      if (filters.dateRange?.start) params.data_inicio = filters.dateRange.start
+      if (filters.dateRange?.end)   params.data_fim    = filters.dateRange.end
       break
     default:
       break
   }
 
-  if (filters.canal !== 'todos')       body.channel      = CANAL_LABEL[filters.canal] || filters.canal
-  if (filters.responsavel !== 'todos') body.responsible  = filters.responsavel
-  if (filters.produto !== 'todos')     body.product      = filters.produto
-  if (filters.etapa !== 'todas')       body.stage        = filters.etapa
-  if (filters.status !== 'todos')      body.status       = filters.status
-  if (filters.tipoReceita !== 'todos') body.revenue_type = filters.tipoReceita
-  if (filters.ticketFaixa !== 'todos') body.ticket_range = filters.ticketFaixa
-  if (filters.atividade !== 'todos')   body.activity     = filters.atividade
+  if (filters.canal !== 'todos')       params.canal              = CANAL_LABEL[filters.canal] || filters.canal
+  if (filters.responsavel !== 'todos') params.responsavel        = filters.responsavel
+  if (filters.produto !== 'todos')     params.produto            = filters.produto
+  if (filters.etapa !== 'todas')       params.etapa_do_funil     = filters.etapa
+  if (filters.status !== 'todos')      params.status_do_negocio  = filters.status
+  if (filters.tipoReceita !== 'todos') params.tipo_de_receita    = filters.tipoReceita
+  if (filters.ticketFaixa !== 'todos') params.faixa_de_ticket    = filters.ticketFaixa
+  if (filters.atividade !== 'todos')   params.tipo_de_atividade  = filters.atividade
 
-  return body
+  return params
 }
 
 function prevMonthRange() {
   const now   = new Date()
   const start = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0)
   const end   = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999)
-  return { start_date: start.getTime(), end_date: end.getTime() }
+  return { data_inicio: start.getTime(), data_fim: end.getTime() }
 }
 
-// Real API returns [{ SDR: [...], CLOSER: [...] }]
-// Normalize to { rawClosers, rawSdrs } so App.jsx can join with user data
 function normalizeResponse(raw) {
-  const item = Array.isArray(raw) ? raw[0] : raw
+  const item = Array.isArray(raw?.data) ? raw.data[0] : (Array.isArray(raw) ? raw[0] : raw)
   if (!item) return { rawClosers: [], rawSdrs: [] }
-
-  // Already in mock format (has VENDEDORES or RANKING_COTA) — pass through
-  if (item.VENDEDORES || item.RANKING_COTA) return item
-
   return {
     rawClosers: item.CLOSER ?? [],
     rawSdrs:    item.SDR    ?? [],
   }
 }
 
-function postStatistic(body) {
-  return fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  }).then(r => { if (!r.ok) throw new Error(r.statusText); return r.json() })
-}
-
 export function useDashboardData() {
-  const [data, setData]         = useState(null)
-  const [prevData, setPrevData] = useState(null)
-  const [loading, setLoading]   = useState(true)
-  const [error, setError]       = useState(null)
-  const [filters, setFilters]   = useState(() => loadFilters())
+  const [data, setData]             = useState(null)
+  const [prevData, setPrevData]     = useState(null)
+  const [loading, setLoading]       = useState(true)
+  const [error, setError]           = useState(null)
+  const [filters, setFilters]       = useState(() => loadFilters())
+  const [refetchKey, setRefetchKey] = useState(0)
+
+  const refetch = () => setRefetchKey(k => k + 1)
 
   useEffect(() => {
     const handler = (e) => setFilters(e.detail)
@@ -117,24 +104,28 @@ export function useDashboardData() {
   useEffect(() => {
     setLoading(true)
     setError(null)
-    const body = buildFilterBody(filters)
+    const params = buildFilterParams(filters)
+    const prevParams = prevMonthRange()
 
-    Promise.all([
-      postStatistic(body),
-      postStatistic(prevMonthRange()),
-    ])
-      .then(([curr, prev]) => {
-        setData(normalizeResponse(curr))
-        setPrevData(normalizeResponse(prev))
-        setLoading(false)
-      })
-      .catch(() => {
-        setData(mockDashboard)
-        setPrevData(null)
-        setLoading(false)
-        setError('fallback')
-      })
-  }, [filters])
+    Promise.allSettled([
+      apiGet('/metrics', params),
+      apiGet('/metrics', prevParams),
+    ]).then(([currResult, prevResult]) => {
+      if (currResult.status === 'fulfilled') {
+        setData(normalizeResponse(currResult.value))
+        setError(null)
+      } else {
+        setData(null)
+        setError('error')
+      }
+      setPrevData(
+        prevResult.status === 'fulfilled'
+          ? normalizeResponse(prevResult.value)
+          : null
+      )
+      setLoading(false)
+    })
+  }, [filters, refetchKey])
 
-  return { data, prevData, loading, error }
+  return { data, prevData, loading, error, refetch }
 }
