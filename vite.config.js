@@ -4,6 +4,15 @@ import { resolve } from 'path'
 
 export default defineConfig({
   plugins: [react()],
+  server: {
+    proxy: {
+      '/dash-api': {
+        target: 'https://dash-api.learningbrands.cloud',
+        changeOrigin: true,
+        rewrite: path => path.replace(/^\/dash-api/, ''),
+      },
+    },
+  },
   build: {
     rollupOptions: {
       input: {
