@@ -1,6 +1,6 @@
-import { useState } from 'react'
 import { Icon, Donut } from '../../components/Charts'
 import { FilterBar } from '../../components/Filters'
+import { DataState } from '../../components/DataState'
 import { useVendasData } from '../../hooks/useVendasData'
 
 function fmtVBR(n, compact = false) {
@@ -227,15 +227,8 @@ function FinBreakdownBlock({ data }) {
   )
 }
 
-function Loading() {
-  return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: 'var(--n-400)', fontSize: 14 }}>Carregando...</div>
-}
-
 export default function AppVendas() {
-  const { data, loading, error } = useVendasData()
-
-  if (loading) return <Loading />
-  if (error || !data) return <div style={{ padding: 40, color: 'var(--danger)' }}>Erro ao carregar dados.</div>
+  const { data, loading, error, refetch } = useVendasData()
 
   const {
     FIN_RESUMO        = {},
@@ -248,6 +241,7 @@ export default function AppVendas() {
   } = data
 
   return (
+    <DataState loading={loading} error={error} onRetry={refetch}>
     <div className="dash">
       <header className="topbar">
         <div className="topbar-inner">
@@ -373,5 +367,6 @@ export default function AppVendas() {
         )}
       </main>
     </div>
+    </DataState>
   )
 }

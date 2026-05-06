@@ -2597,3 +2597,50 @@ html, body {
   .fbar-seg button { flex: 1; padding: 7px 8px; }
   .fbar-div { display: none; }
 }
+
+/* DataState */
+.data-state-spinner-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  pointer-events: none;
+}
+.data-state-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--n-200);
+  border-top-color: var(--b-500);
+  border-radius: 50%;
+  animation: ds-spin 0.7s linear infinite;
+}
+@keyframes ds-spin { to { transform: rotate(360deg); } }
+
+.data-state-error-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  margin-bottom: 12px;
+}
+.data-state-error-banner button {
+  margin-left: auto;
+  padding: 4px 12px;
+  background: rgba(255,255,255,0.2);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.4);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+}
+.data-state-error-banner button:hover {
+  background: rgba(255,255,255,0.35);
+}
