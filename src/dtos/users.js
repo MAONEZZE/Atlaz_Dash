@@ -17,3 +17,6 @@
  * @property {string} cargo
  * @property {{ CLOSER: Array, SDR: Array }} statistics
  */
+
+export const EMPTY_USERS_RESPONSE = Object.freeze({ data: [] })
+export const EMPTY_USER_STATISTICS = Object.freeze({ user_id: '', nome: '', cargo: '', statistics: { CLOSER: [], SDR: [] } })
