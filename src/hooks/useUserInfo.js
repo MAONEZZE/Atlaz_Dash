@@ -1,45 +1,42 @@
 import { useState, useEffect } from 'react'
-
-const API_URL = 'https://n8n.learningbrands.cloud/webhook-test/user/info'
-
-const TOKEN_MAP = {
-  jacob:    import.meta.env.VITE_IMG_JACOB_TOKEN,
-  jonathan: import.meta.env.VITE_IMG_JONATHAN_TOKEN,
-  alex:     import.meta.env.VITE_IMG_ALEX_TOKEN,
-  jennifer: import.meta.env.VITE_IMG_JENNIFER_TOKEN,
-}
-
-function buildImageUrl(baseUrl, userId) {
-  const token = TOKEN_MAP[userId?.toLowerCase()] || ''
-  return token ? baseUrl + token : baseUrl
-}
+import { apiGet } from '../lib/apiClient'
 
 function normalizeUser(u) {
   return {
     id:       u.id,
     nome:     u.nome,
-    imageUrl: u.imagem_url ? buildImageUrl(u.imagem_url, u.id) : null,
-    cargo:    u.cargo, // 'closer' | 'sdr'
+    imageUrl: u.imagem_url || null,
+    cargo:    u.cargo,
   }
 }
 
 export function useUserInfo() {
-  const [users, setUsers]     = useState([])
-  const [loading, setLoading] = useState(true)
+  const [users, setUsers]           = useState([])
+  const [loading, setLoading]       = useState(true)
+  const [error, setError]           = useState(null)
+  const [refetchKey, setRefetchKey] = useState(0)
+
+  const refetch = () => setRefetchKey(k => k + 1)
 
   useEffect(() => {
-    fetch(API_URL)
-      .then(r => { if (!r.ok) throw new Error(r.statusText); return r.json() })
+    setLoading(true)
+    setError(null)
+    apiGet('/users')
       .then(data => {
-        const list = Array.isArray(data) ? data : [data]
+        const raw  = data?.data ?? data
+        const list = Array.isArray(raw) ? raw : [raw]
         setUsers(list.map(normalizeUser))
         setLoading(false)
       })
-      .catch(() => setLoading(false))
-  }, [])
+      .catch(err => {
+        setUsers([])
+        setError(err.message || 'error')
+        setLoading(false)
+      })
+  }, [refetchKey])
 
-  const closers = users.filter(u => u.cargo === 'closer')
-  const sdrs    = users.filter(u => u.cargo === 'sdr')
+  const closers = users.filter(u => u.cargo === 'Closer')
+  const sdrs    = users.filter(u => u.cargo === 'SDR')
 
-  return { users, closers, sdrs, loading }
+  return { users, closers, sdrs, loading, error, refetch }
 }
