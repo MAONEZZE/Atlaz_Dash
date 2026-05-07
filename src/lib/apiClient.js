@@ -1,3 +1,5 @@
+import { getAccessToken, getRefreshToken, setTokens, clearAuth } from './auth.js'
+
 const DEFAULT_TIMEOUT_MS = 15000
 
 const BASE_URL = (import.meta.env?.VITE_API_BASE_URL ?? '').replace(/\/+$/, '')
@@ -42,7 +44,25 @@ async function parseJsonOrThrow(response) {
   }
 }
 
-async function request(method, path, { params, body, signal, headers } = {}) {
+async function refreshTokens() {
+  const refreshToken = getRefreshToken()
+  if (!refreshToken) return false
+  try {
+    const res = await fetch(buildUrl('/auth/refresh'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    })
+    if (!res.ok) return false
+    const data = await res.json()
+    setTokens(data)
+    return true
+  } catch {
+    return false
+  }
+}
+
+async function request(method, path, { params, body, signal, headers } = {}, _isRetry = false) {
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS)
   if (signal) {
@@ -50,6 +70,8 @@ async function request(method, path, { params, body, signal, headers } = {}) {
   }
 
   const defaultHeaders = { 'Content-Type': 'application/json', Accept: 'application/json' }
+  const token = getAccessToken()
+  if (token) defaultHeaders['Authorization'] = `Bearer ${token}`
   const mergedHeaders = { ...defaultHeaders, ...headers }
 
   let response
@@ -68,6 +90,16 @@ async function request(method, path, { params, body, signal, headers } = {}) {
     throw new ApiError(`Network error: ${err.message}`, { cause: err })
   }
   clearTimeout(timeoutId)
+
+  if (response.status === 401 && !_isRetry) {
+    const refreshed = await refreshTokens()
+    if (refreshed) {
+      return request(method, path, { params, body, signal, headers }, true)
+    }
+    clearAuth()
+    window.location.href = '/login.html'
+    return new Promise(() => {})
+  }
 
   if (response.status === 422) {
     const payload = await parseJsonOrThrow(response)

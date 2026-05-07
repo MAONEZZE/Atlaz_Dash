@@ -2,6 +2,7 @@ import { Icon, Donut } from '../../components/Charts'
 import { FilterBar } from '../../components/Filters'
 import { DataState } from '../../components/DataState'
 import { useVendasData } from '../../hooks/useVendasData'
+import { getUserInfo, isAuthenticated } from '../../lib/auth'
 
 function fmtVBR(n, compact = false) {
   if (compact && Math.abs(n) >= 1000000) return 'R$ ' + (n / 1000000).toFixed(2).replace('.', ',') + 'M'
@@ -138,6 +139,7 @@ function ReceitaMensalChart({ data }) {
 
 function DonutProdutos({ data }) {
   const total = data.reduce((s, p) => s + p.bruto, 0)
+  if (total === 0) return null
   const R = 88, r = 58, cx = 120, cy = 120
   let acc = 0
   const arcs = data.filter(p => p.bruto > 0).map((p) => {
@@ -227,8 +229,18 @@ function FinBreakdownBlock({ data }) {
   )
 }
 
+function UserAvatar({ user, className = 'avatar' }) {
+  if (user?.imageUrl) {
+    return <img className={`${className} avatar-img`} src={user.imageUrl} alt={user.nome} />
+  }
+  const initials = user?.nome?.split(' ').map(w => w[0]).slice(0, 2).join('') || '??'
+  return <div className={className} style={user?.cor ? { background: user.cor } : {}}>{initials}</div>
+}
+
 export default function AppVendas() {
   const { data, loading, error, refetch } = useVendasData()
+  const authUser = getUserInfo()
+  const mesLabel = new Date().toLocaleString('pt-BR', { month: 'long', year: 'numeric' })
 
   const {
     FIN_RESUMO        = {},
@@ -255,24 +267,43 @@ export default function AppVendas() {
             <a className="item active" href="/vendas.html">Vendas</a>
           </nav>
           <div className="topbar-right">
-            <button className="btn-icon" title="Notificações"><Icon name="bell" /></button>
-            <button className="btn-icon" title="Configurações"><Icon name="settings" /></button>
-            <div className="user">
-              <div className="avatar">AM</div>
-              <div className="who">
-                <div className="name">Ana Martins</div>
-                <div className="role">Gerente comercial</div>
+            <button className="btn-reload" onClick={refetch} title="Recarregar dados">
+              <Icon name="refresh" size={13} />
+              Recarregar
+            </button>
+            {authUser ? (
+              <div className="user">
+                <UserAvatar user={authUser} className="avatar" />
+                <div className="who">
+                  <div className="name">{authUser.nome}</div>
+                  <div className="role">{authUser.cargo}</div>
+                </div>
               </div>
-            </div>
+            ) : (
+              <button className="btn-login-top" onClick={() => { window.location.href = '/login.html' }}>
+                Entrar
+              </button>
+            )}
           </div>
         </div>
       </header>
 
+      {!isAuthenticated() ? (
+        <main className="main">
+          <div className="auth-guard">
+            <div className="auth-guard-title">Acesso restrito</div>
+            <div className="auth-guard-sub">Você precisa estar autenticado para ver esta página.</div>
+            <button className="auth-guard-btn" onClick={() => { window.location.href = '/login.html' }}>
+              Ir para o login
+            </button>
+          </div>
+        </main>
+      ) : (
       <main className="main">
         <div className="head">
           <div>
             <h1>Vendas</h1>
-            <div className="sub">Controle de receita, caixa previsto e performance comercial · Abril, 2026</div>
+            <div className="sub">Controle de receita, caixa previsto e performance comercial · {mesLabel}</div>
           </div>
         </div>
 
@@ -358,7 +389,7 @@ export default function AppVendas() {
           <>
             <div className="section-head">
               <div><div className="eyebrow">Detalhamento</div><h2 className="section-title">Do bruto ao líquido</h2></div>
-              <div className="hint">Abril, 2026</div>
+              <div className="hint">{mesLabel.charAt(0).toUpperCase() + mesLabel.slice(1)}</div>
             </div>
             <div className="card span-12" style={{ padding: '28px 32px', marginBottom: 40 }}>
               <FinBreakdownBlock data={FIN_BREAKDOWN} />
@@ -366,6 +397,7 @@ export default function AppVendas() {
           </>
         )}
       </main>
+      )}
     </div>
     </DataState>
   )

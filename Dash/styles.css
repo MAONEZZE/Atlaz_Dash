@@ -184,7 +184,6 @@ html, body {
   font-size: 11px;
   display: grid; place-items: center;
 }
-.topbar-right .user .avatar-img { object-fit: cover; }
 .topbar-right .user .who .name { font-size: 12.5px; font-weight: 500; color: var(--n-900); line-height: 1.1; }
 .topbar-right .user .who .role { font-size: 10.5px; color: var(--n-400); }
 
@@ -954,10 +953,6 @@ html, body {
   text-align: center;
   gap: 6px;
 }
-.hp-av-wrap {
-  position: relative;
-  display: inline-flex;
-}
 .hp-av {
   width: 44px; height: 44px;
   border-radius: 50%;
@@ -965,7 +960,7 @@ html, body {
   color: #fff;
   font-weight: 600;
   font-size: 13px;
-  object-fit: cover;
+  position: relative;
   box-shadow: 0 2px 10px rgba(14,18,24,0.10);
 }
 .hp.first .hp-av {
@@ -973,7 +968,7 @@ html, body {
   font-size: 17px;
   box-shadow: 0 6px 22px rgba(59,110,240,0.28);
 }
-.hp-av-wrap .hp-rank {
+.hp-rank {
   position: absolute;
   bottom: -6px;
   left: 50%;
@@ -987,7 +982,7 @@ html, body {
   font-weight: 700;
   font-family: var(--font-mono);
 }
-.hp.first .hp-av-wrap .hp-rank {
+.hp.first .hp-rank {
   background: var(--n-900);
   color: var(--n-0);
   border-color: var(--n-900);
@@ -2597,194 +2592,3 @@ html, body {
   .fbar-seg button { flex: 1; padding: 7px 8px; }
   .fbar-div { display: none; }
 }
-
-/* DataState */
-.data-state-spinner-overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10;
-  pointer-events: none;
-}
-.data-state-spinner {
-  width: 36px;
-  height: 36px;
-  border: 3px solid var(--n-200);
-  border-top-color: var(--b-500);
-  border-radius: 50%;
-  animation: ds-spin 0.7s linear infinite;
-}
-@keyframes ds-spin { to { transform: rotate(360deg); } }
-
-.data-state-error-banner {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 16px;
-  background: var(--danger);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 500;
-  border-radius: var(--radius-sm);
-  margin-bottom: 12px;
-}
-.data-state-error-banner button {
-  margin-left: auto;
-  padding: 4px 12px;
-  background: rgba(255,255,255,0.2);
-  color: #fff;
-  border: 1px solid rgba(255,255,255,0.4);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 600;
-}
-.data-state-error-banner button:hover {
-  background: rgba(255,255,255,0.35);
-}
-
-/* ─── Login page ─── */
-.login-page {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--n-50);
-}
-.login-card {
-  background: var(--n-0);
-  border: 1px solid var(--n-150);
-  border-radius: var(--radius);
-  box-shadow: 0 4px 24px rgba(0,0,0,0.06);
-  padding: 48px 40px 40px;
-  width: 380px;
-}
-.login-brand {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 32px;
-}
-.login-title {
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--n-900);
-  margin-bottom: 24px;
-}
-.login-form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-.login-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.login-label {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--n-700);
-}
-.login-input {
-  padding: 9px 12px;
-  border: 1px solid var(--n-200);
-  border-radius: var(--radius-sm);
-  font-size: 14px;
-  color: var(--n-900);
-  background: var(--n-0);
-  transition: border-color 0.15s;
-  outline: none;
-}
-.login-input:focus {
-  border-color: var(--b-500);
-  box-shadow: 0 0 0 3px var(--b-50);
-}
-.login-error {
-  background: #FEF2F2;
-  color: #B91C1C;
-  border: 1px solid #FECACA;
-  border-radius: var(--radius-sm);
-  padding: 8px 12px;
-  font-size: 13px;
-}
-.login-submit {
-  margin-top: 4px;
-  padding: 10px 16px;
-  background: var(--b-500);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-sm);
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.login-submit:hover:not(:disabled) { background: var(--b-600); }
-.login-submit:disabled { opacity: 0.6; cursor: not-allowed; }
-
-/* ─── Auth guard (vendas page) ─── */
-.auth-guard {
-  min-height: 60vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  color: var(--n-500);
-}
-.auth-guard-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--n-700);
-}
-.auth-guard-sub {
-  font-size: 14px;
-  color: var(--n-500);
-}
-.auth-guard-btn {
-  margin-top: 8px;
-  padding: 10px 24px;
-  background: var(--b-500);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-sm);
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.auth-guard-btn:hover { background: var(--b-600); }
-
-/* ─── Reload button in topbar ─── */
-.btn-reload {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 12px;
-  border: 1px solid var(--n-200);
-  border-radius: var(--radius-sm);
-  background: var(--n-0);
-  color: var(--n-600);
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
-}
-.btn-reload:hover { background: var(--n-50); border-color: var(--n-300); }
-
-/* ─── Login button in topbar ─── */
-.btn-login-top {
-  padding: 5px 14px;
-  background: var(--b-500);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-sm);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.btn-login-top:hover { background: var(--b-600); }

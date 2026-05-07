@@ -6,6 +6,7 @@ import { useDashboardData } from '../../hooks/useDashboardData'
 import { useUserInfo } from '../../hooks/useUserInfo'
 import { useSalesGoals } from '../../hooks/useSalesGoals'
 import { useTeamGoals } from '../../hooks/useTeamGoals'
+import { getUserInfo, isAuthenticated } from '../../lib/auth'
 
 function kmoney(n) {
   if (n >= 1_000_000) return 'R$ ' + (n / 1_000_000).toFixed(2).replace('.', ',') + 'M'
@@ -50,15 +51,17 @@ function UserAvatar({ user, className = 'avatar' }) {
 }
 
 export default function App() {
-  const { data, loading: dashLoading, error: dashError, refetch: dashRefetch } = useDashboardData()
-  const { users, closers, sdrs }                                                = useUserInfo()
-  const { goals }                                                               = useSalesGoals()
-  const { teamTotals }                                                          = useTeamGoals()
-  const [hallMode, setHallMode]                                                 = useState('closer')
+  const { data, loading: dashLoading, error: dashError, refetch: dashRefetch }   = useDashboardData()
+  const { users, closers, sdrs, refetch: usersRefetch }                          = useUserInfo()
+  const { goals, refetch: goalsRefetch }                                         = useSalesGoals()
+  const { teamTotals, refetch: teamRefetch }                                     = useTeamGoals()
+  const [hallMode, setHallMode]                                                  = useState('closer')
 
   const loading = dashLoading
   const error   = dashError
-  const refetch = dashRefetch
+  const refetch = () => { dashRefetch(); usersRefetch?.(); goalsRefetch?.(); teamRefetch?.() }
+
+  const authUser = getUserInfo()
 
   const META_TOTAL = goals?.meta_total ?? 0
 
@@ -140,8 +143,7 @@ export default function App() {
   const hallMetric    = hallMode === 'closer' ? (r) => `${r.rr ?? 0} R.R`     : (r) => `${r.score?.toFixed(1)} pts`
   const hallSubMetric = hallMode === 'closer' ? (r) => `${r.ra ?? 0} agendadas` : (r) => `${r.reunioes ?? 0} reuniões`
 
-  const mesLabel    = new Date().toLocaleString('pt-BR', { month: 'long', year: 'numeric' })
-  const currentUser = users[0] || null
+  const mesLabel = new Date().toLocaleString('pt-BR', { month: 'long', year: 'numeric' })
 
   return (
     <div className="dash">
@@ -157,15 +159,23 @@ export default function App() {
             <a className="item" href="/vendas.html">Vendas</a>
           </nav>
           <div className="topbar-right">
-            <button className="btn-icon" title="Notificações"><Icon name="bell" /></button>
-            <button className="btn-icon" title="Configurações"><Icon name="settings" /></button>
-            <div className="user">
-              <UserAvatar user={currentUser} className="avatar" />
-              <div className="who">
-                <div className="name">{currentUser?.nome || '—'}</div>
-                <div className="role">{currentUser?.cargo || ''}</div>
+            <button className="btn-reload" onClick={refetch} title="Recarregar dados">
+              <Icon name="refresh" size={13} />
+              Recarregar
+            </button>
+            {authUser ? (
+              <div className="user">
+                <UserAvatar user={authUser} className="avatar" />
+                <div className="who">
+                  <div className="name">{authUser.nome}</div>
+                  <div className="role">{authUser.cargo}</div>
+                </div>
               </div>
-            </div>
+            ) : (
+              <button className="btn-login-top" onClick={() => { window.location.href = '/login.html' }}>
+                Entrar
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -178,14 +188,14 @@ export default function App() {
           </div>
         </div>
 
-        <FilterBar />
+        <FilterBar hideCanal />
 
         <DataState loading={loading} error={error} onRetry={refetch}>
 
           {/* Row 1 — Meta + Hall */}
           <div className="grid stg" style={{ marginBottom: 28 }}>
             <div className="card span-4 hero">
-              <div className="eyebrow">Meta do mês · Closers</div>
+              <div className="eyebrow">Meta do mês</div>
               <div className="hero-value num">{kmoney(META_TOTAL)}</div>
               <div className="hero-sub">meta de faturamento mensal</div>
               <div className="hero-foot">
@@ -237,10 +247,10 @@ export default function App() {
             </div>
           </div>
           <div className="ops-grid stg" style={{ marginBottom: 28 }}>
-            <OpCard icon="hash"  label="Números captados"    value={sdrTotals.numeros_captados     ?? 0} meta={sdrGoalTotals.numeros    ?? 0} accent="#10B981" delay={40}  />
-            <OpCard icon="phone" label="Ligações agendadas"  value={sdrTotals.ligacoes_agendadas  ?? 0} meta={sdrGoalTotals.ligacoes   ?? 0} accent="#2551D8" delay={100} />
-            <OpCard icon="users" label="Abordagens"          value={sdrTotals.abordagens          ?? 0} meta={0}                              accent="#3B6EF0" delay={160} />
-            <OpCard icon="share" label="Indicações captadas" value={sdrTotals.indicacoes_captadas ?? 0} meta={sdrGoalTotals.indicacoes ?? 0} accent="#8B5CF6" delay={220} />
+            <OpCard icon="hash"  label="Números captados"    value={sdrGoalTotals.numeros    ?? 0} meta={sdrTotals.numeros_captados     ?? 0} accent="#10B981" delay={40}  />
+            <OpCard icon="phone" label="Ligações agendadas"  value={sdrGoalTotals.ligacoes   ?? 0} meta={sdrTotals.ligacoes_agendadas  ?? 0} accent="#2551D8" delay={100} />
+            <OpCard icon="users" label="Abordagens"          value={0}                             meta={sdrTotals.abordagens          ?? 0} accent="#3B6EF0" delay={160} />
+            <OpCard icon="share" label="Indicações captadas" value={sdrGoalTotals.indicacoes ?? 0} meta={sdrTotals.indicacoes_captadas ?? 0} accent="#8B5CF6" delay={220} />
           </div>
 
           {/* Row 3 — Ranking Closers */}

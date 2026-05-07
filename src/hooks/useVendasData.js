@@ -2,14 +2,6 @@ import { useState, useEffect } from 'react'
 import { loadFilters } from '../components/Filters'
 import { apiGet } from '../lib/apiClient'
 
-const CANAL_LABEL = {
-  linkedin:  'Linkedin',
-  instagram: 'Instagram',
-  indicacao: 'Indicação',
-  whatsapp:  'WhatsApp',
-  outros:    'Outros',
-}
-
 function buildParams(filters) {
   const now = Date.now()
   const params = {}
@@ -51,7 +43,7 @@ function buildParams(filters) {
       break
   }
 
-  if (filters.canal   !== 'todos') params.canal   = CANAL_LABEL[filters.canal] || filters.canal
+  if (filters.canal   !== 'todos') params.canal   = filters.canal
   if (filters.produto !== 'todos') params.produto  = filters.produto
 
   return params

@@ -2,14 +2,6 @@ import { useState, useEffect } from 'react'
 import { loadFilters } from '../components/Filters'
 import { apiGet } from '../lib/apiClient'
 
-const CANAL_LABEL = {
-  linkedin:  'Linkedin',
-  instagram: 'Instagram',
-  indicacao: 'Indicação',
-  whatsapp:  'WhatsApp',
-  outros:    'Outros',
-}
-
 function buildFilterParams(filters) {
   const now = Date.now()
   const params = {}
@@ -57,7 +49,7 @@ function buildFilterParams(filters) {
       break
   }
 
-  if (filters.canal !== 'todos')       params.canal              = CANAL_LABEL[filters.canal] || filters.canal
+  if (filters.canal !== 'todos')       params.canal              = filters.canal
   if (filters.responsavel !== 'todos') params.responsavel        = filters.responsavel
   if (filters.produto !== 'todos')     params.produto            = filters.produto
   if (filters.etapa !== 'todas')       params.etapa_do_funil     = filters.etapa
@@ -102,21 +94,23 @@ export function useDashboardData() {
   }, [])
 
   useEffect(() => {
+    const controller = new AbortController()
     setLoading(true)
     setError(null)
     const params = buildFilterParams(filters)
     const prevParams = prevMonthRange()
 
     Promise.allSettled([
-      apiGet('/metrics', params),
-      apiGet('/metrics', prevParams),
+      apiGet('/metrics', params,     { signal: controller.signal }),
+      apiGet('/metrics', prevParams, { signal: controller.signal }),
     ]).then(([currResult, prevResult]) => {
+      if (controller.signal.aborted) return
       if (currResult.status === 'fulfilled') {
         setData(normalizeResponse(currResult.value))
         setError(null)
       } else {
         setData(null)
-        setError('error')
+        setError(currResult.reason?.message ?? 'error')
       }
       setPrevData(
         prevResult.status === 'fulfilled'
@@ -125,6 +119,8 @@ export function useDashboardData() {
       )
       setLoading(false)
     })
+
+    return () => controller.abort()
   }, [filters, refetchKey])
 
   return { data, prevData, loading, error, refetch }

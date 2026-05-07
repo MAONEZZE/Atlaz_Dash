@@ -19,6 +19,7 @@ export default defineConfig({
         main:      resolve(__dirname, 'index.html'),
         prevendas: resolve(__dirname, 'prevendas.html'),
         vendas:    resolve(__dirname, 'vendas.html'),
+        login:     resolve(__dirname, 'login.html'),
       },
     },
   },

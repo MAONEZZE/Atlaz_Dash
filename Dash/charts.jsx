@@ -1,12 +1,13 @@
-import { useState } from 'react'
+// Chart + icon primitives
+const { useState, useEffect, useMemo, useRef } = React;
 
-export function Icon({ name, size = 16 }) {
+function Icon({ name, size = 16 }) {
   const paths = {
     home:      'M3 12l9-8 9 8v8a2 2 0 01-2 2h-4v-6h-6v6H5a2 2 0 01-2-2z',
     chart:     'M3 3v18h18 M7 14l3-3 3 3 5-5',
     users:     'M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2 M9 11a4 4 0 100-8 4 4 0 000 8z M22 21v-2a4 4 0 00-3-3.87 M16 3.13a4 4 0 010 7.75',
     pkg:       'M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z M3.3 7L12 12l8.7-5 M12 22V12',
-    settings:  'M12 15a3 3 0 100-6 3 3 0 000 6z M19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-1.8-.3 1.6 1.6 0 00-1 1.5V21a2 2 0 01-4 0v-.1a1.6 1.6 0 00-1-1.5 1.6 1.6 0 00-1.8.3l-.1-.1a2 2 0 11-2.8-2.8l.1-.1a1.6 1.6 0 00.3-1.8 1.6 1.6 0 00-1.5-1H3a2 2 0 010-4h.1a1.6 1.6 0 001.5-1 1.6 1.6 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.6 1.6 0 001.8.3H9a1.6 1.6 0 001-1.5V3a2 2 0 014 0v.1a1.6 1.6 0 001 1.5 1.6 1.6 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.6 1.6 0 00-.3 1.8V9a1.6 1.6 0 001.5 1H21a2 2 0 010 4h-.1a1.6 1.6 0 00-1.5 1z',
+    settings:  'M12 15a3 3 0 100-6 3 3 0 000 6z M19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-1.8-.3 1.6 1.6 0 00-1 1.5V21a2 2 0 01-4 0v-.1a1.6 1.6 0 00-1-1.5 1.6 1.6 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.6 1.6 0 00.3-1.8 1.6 1.6 0 00-1.5-1H3a2 2 0 010-4h.1a1.6 1.6 0 001.5-1 1.6 1.6 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.6 1.6 0 001.8.3H9a1.6 1.6 0 001-1.5V3a2 2 0 014 0v.1a1.6 1.6 0 001 1.5 1.6 1.6 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.6 1.6 0 00-.3 1.8V9a1.6 1.6 0 001.5 1H21a2 2 0 010 4h-.1a1.6 1.6 0 00-1.5 1z',
     bell:      'M6 8a6 6 0 0112 0c0 7 3 9 3 9H3s3-2 3-9 M13.7 21a2 2 0 01-3.4 0',
     search:    'M11 19a8 8 0 100-16 8 8 0 000 16z M21 21l-4.3-4.3',
     download:  'M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4 M7 10l5 5 5-5 M12 15V3',
@@ -26,36 +27,36 @@ export function Icon({ name, size = 16 }) {
     cal:       'M19 4H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V6a2 2 0 00-2-2z M16 2v4 M8 2v4 M3 10h18 M8 14h2 M14 14h2 M8 18h2',
     share:     'M18 8a3 3 0 100-6 3 3 0 000 6z M6 15a3 3 0 100-6 3 3 0 000 6z M18 22a3 3 0 100-6 3 3 0 000 6z M8.6 13.5l6.8 4 M15.4 6.5l-6.8 4',
     hash:      'M4 9h16 M4 15h16 M10 3L8 21 M16 3l-2 18',
-    refresh:   'M1 4v6h6 M23 20v-6h-6 M20.5 9A9 9 0 005.2 5.2L1 10 M3.5 15a9 9 0 0015.3 3.8L23 14',
-  }
+  };
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <path d={paths[name] ?? ''} />
+      <path d={paths[name]} />
     </svg>
-  )
+  );
 }
 
-export function Donut({ data, size = 140, onHover }) {
-  const total = data.reduce((s, d) => s + (d.valor ?? d.bruto ?? 0), 0)
-  const thickness = 22
-  const r = size / 2
-  const innerR = r - thickness
-  let a0 = -Math.PI / 2
+// ── Donut chart ───────────────────────────────────
+function Donut({ data, size = 140, onHover }) {
+  const total = data.reduce((s, d) => s + (d.valor ?? d.bruto ?? 0), 0);
+  const thickness = 22;
+  const r = size / 2;
+  const innerR = r - thickness;
+  let a0 = -Math.PI / 2;
   const segs = data.map(d => {
-    const v = d.valor ?? d.bruto ?? 0
-    const frac = total > 0 ? v / total : 0
-    const a1 = a0 + frac * Math.PI * 2
-    const large = frac > 0.5 ? 1 : 0
-    const x0 = r + r * Math.cos(a0), y0 = r + r * Math.sin(a0)
-    const x1 = r + r * Math.cos(a1), y1 = r + r * Math.sin(a1)
-    const ix0 = r + innerR * Math.cos(a1), iy0 = r + innerR * Math.sin(a1)
-    const ix1 = r + innerR * Math.cos(a0), iy1 = r + innerR * Math.sin(a0)
-    const d_ = `M${x0},${y0} A${r},${r} 0 ${large} 1 ${x1},${y1} L${ix0},${iy0} A${innerR},${innerR} 0 ${large} 0 ${ix1},${iy1} Z`
-    const seg = { d: d_, color: d.cor, valor: v, nome: d.nome, pct: frac * 100 }
-    a0 = a1
-    return seg
-  })
-  const [hi, setHi] = useState(null)
+    const v = d.valor ?? d.bruto ?? 0;
+    const frac = total > 0 ? v / total : 0;
+    const a1 = a0 + frac * Math.PI * 2;
+    const large = frac > 0.5 ? 1 : 0;
+    const x0 = r + r * Math.cos(a0), y0 = r + r * Math.sin(a0);
+    const x1 = r + r * Math.cos(a1), y1 = r + r * Math.sin(a1);
+    const ix0 = r + innerR * Math.cos(a1), iy0 = r + innerR * Math.sin(a1);
+    const ix1 = r + innerR * Math.cos(a0), iy1 = r + innerR * Math.sin(a0);
+    const d_ = `M${x0},${y0} A${r},${r} 0 ${large} 1 ${x1},${y1} L${ix0},${iy0} A${innerR},${innerR} 0 ${large} 0 ${ix1},${iy1} Z`;
+    const seg = { d: d_, color: d.cor, valor: v, nome: d.nome, pct: frac * 100 };
+    a0 = a1;
+    return seg;
+  });
+  const [hi, setHi] = useState(null);
 
   return (
     <div style={{ position: 'relative', width: size, height: size }}>
@@ -67,8 +68,8 @@ export function Donut({ data, size = 140, onHover }) {
             fill={s.color}
             opacity={hi === null || hi === i ? 1 : 0.35}
             style={{ transition: 'opacity 160ms ease', cursor: 'pointer' }}
-            onMouseEnter={e => { setHi(i); onHover?.(s, e) }}
-            onMouseLeave={() => { setHi(null); onHover?.(null) }}
+            onMouseEnter={e => { setHi(i); onHover?.(s, e); }}
+            onMouseLeave={() => { setHi(null); onHover?.(null); }}
           />
         ))}
       </svg>
@@ -87,25 +88,26 @@ export function Donut({ data, size = 140, onHover }) {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
-export function ProjectionChart({ data, w = 640, h = 220 }) {
-  const [hi, setHi] = useState(null)
-  if (!data || data.length < 2) return null
+// ── Line + bar chart (projeção) ───────────────────
+function ProjectionChart({ data, w = 640, h = 220 }) {
+  const pad = { t: 14, r: 12, b: 24, l: 40 };
+  const iw = w - pad.l - pad.r;
+  const ih = h - pad.t - pad.b;
+  const maxY = Math.max(...data.map(d => Math.max(d.meta, d.fat))) * 1.08;
+  const xFor = i => pad.l + (i / (data.length - 1)) * iw;
+  const yFor = v => pad.t + ih - (v / maxY) * ih;
+  const barW = iw / data.length * 0.55;
 
-  const pad = { t: 14, r: 12, b: 24, l: 40 }
-  const iw = w - pad.l - pad.r
-  const ih = h - pad.t - pad.b
-  const maxY = data.reduce((m, d) => Math.max(m, d.meta, d.fat), 0) * 1.08
-  const xFor = i => pad.l + (i / (data.length - 1)) * iw
-  const yFor = v => pad.t + ih - (v / maxY) * ih
-  const barW = iw / data.length * 0.55
+  const fatLine = data.map((d, i) => `${i === 0 ? 'M' : 'L'}${xFor(i)},${yFor(d.fat)}`).join(' ');
+  const metaLine = data.map((d, i) => `${i === 0 ? 'M' : 'L'}${xFor(i)},${yFor(d.meta)}`).join(' ');
 
-  const fatLine  = data.map((d, i) => `${i === 0 ? 'M' : 'L'}${xFor(i)},${yFor(d.fat)}`).join(' ')
-  const metaLine = data.map((d, i) => `${i === 0 ? 'M' : 'L'}${xFor(i)},${yFor(d.meta)}`).join(' ')
+  // gridlines
+  const grid = [0, 0.25, 0.5, 0.75, 1].map(f => ({ y: pad.t + ih - f * ih, v: maxY * f }));
 
-  const grid = [0, 0.25, 0.5, 0.75, 1].map(f => ({ y: pad.t + ih - f * ih, v: maxY * f }))
+  const [hi, setHi] = useState(null);
 
   return (
     <div style={{ position: 'relative' }}>
@@ -118,6 +120,7 @@ export function ProjectionChart({ data, w = 640, h = 220 }) {
             </text>
           </g>
         ))}
+        {/* Meta bars */}
         {data.map((d, i) => (
           <rect
             key={i}
@@ -130,8 +133,11 @@ export function ProjectionChart({ data, w = 640, h = 220 }) {
             style={{ transition: 'opacity 150ms ease' }}
           />
         ))}
-        <path d={fatLine}  stroke="var(--b-600)" strokeWidth="2" fill="none" strokeLinejoin="round" strokeLinecap="round" />
+        {/* Faturamento line */}
+        <path d={fatLine} stroke="var(--b-600)" strokeWidth="2" fill="none" strokeLinejoin="round" strokeLinecap="round" />
+        {/* Meta line (dashed) */}
         <path d={metaLine} stroke="var(--n-400)" strokeWidth="1" fill="none" strokeDasharray="3 3" />
+        {/* Points */}
         {data.map((d, i) => (
           <g key={i}>
             <circle
@@ -143,8 +149,10 @@ export function ProjectionChart({ data, w = 640, h = 220 }) {
               style={{ transition: 'r 120ms ease' }}
             />
             <rect
-              x={xFor(i) - barW / 2} y={pad.t}
-              width={barW} height={ih}
+              x={xFor(i) - barW / 2}
+              y={pad.t}
+              width={barW}
+              height={ih}
               fill="transparent"
               onMouseEnter={() => setHi(i)}
               onMouseLeave={() => setHi(null)}
@@ -152,11 +160,13 @@ export function ProjectionChart({ data, w = 640, h = 220 }) {
             />
           </g>
         ))}
+        {/* X labels — show every 3 */}
         {data.map((d, i) => i % 3 === 0 && (
           <text key={i} x={xFor(i)} y={h - 8} textAnchor="middle" fontSize="10" fill="var(--n-400)" fontFamily="var(--font-mono)">
             {String(d.dia).padStart(2, '0')}
           </text>
         ))}
+        {/* hover line */}
         {hi !== null && (
           <line x1={xFor(hi)} y1={pad.t} x2={xFor(hi)} y2={pad.t + ih} stroke="var(--n-300)" strokeWidth="1" strokeDasharray="2 2" />
         )}
@@ -188,5 +198,7 @@ export function ProjectionChart({ data, w = 640, h = 220 }) {
         </div>
       )}
     </div>
-  )
+  );
 }
+
+Object.assign(window, { Icon, Donut, ProjectionChart });

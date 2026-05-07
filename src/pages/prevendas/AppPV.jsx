@@ -3,6 +3,7 @@ import { Icon } from '../../components/Charts'
 import { FilterBar } from '../../components/Filters'
 import { DataState } from '../../components/DataState'
 import { usePrevendasData } from '../../hooks/usePrevendasData'
+import { getUserInfo } from '../../lib/auth'
 
 function fmtPV(n) { return n.toLocaleString('pt-BR') }
 function fmtVal(v, fmt) {
@@ -39,6 +40,7 @@ function PVKpi({ label, value, meta, cor, delay = 0 }) {
 
 function FunnelDynamic({ canal }) {
   const stages = canal.etapas
+  if (stages.length === 0) return null
   const topo = stages[0].v
   const W = 560, padTop = 8
   const rowH = 48
@@ -48,7 +50,7 @@ function FunnelDynamic({ canal }) {
   const drops = stages.slice(0, -1).map((s, i) => ({
     i, pct: (stages[i + 1].v / s.v) * 100, drop: 100 - (stages[i + 1].v / s.v) * 100,
   }))
-  const worstIdx = drops.reduce((a, b) => b.drop > a.drop ? b : a, drops[0]).i
+  const worstIdx = drops.length > 0 ? drops.reduce((a, b) => b.drop > a.drop ? b : a).i : -1
 
   return (
     <div className="fnl-wrap">
@@ -102,14 +104,15 @@ function FunnelDynamic({ canal }) {
 
 function CanalAnalytics({ canal }) {
   const s = canal.etapas
+  if (s.length < 2) return null
   const topo = s[0].v
   const fim  = s[s.length - 1].v
   const convAcum = (fim / topo) * 100
   const drops = s.slice(0, -1).map((e, i) => ({
     from: e, to: s[i + 1], pct: (s[i + 1].v / e.v) * 100, drop: 100 - (s[i + 1].v / e.v) * 100,
   }))
-  const worst = drops.reduce((a, b) => b.drop > a.drop ? b : a, drops[0])
-  const best  = drops.reduce((a, b) => b.pct > a.pct ? b : a, drops[0])
+  const worst = drops.reduce((a, b) => b.drop > a.drop ? b : a)
+  const best  = drops.reduce((a, b) => b.pct > a.pct ? b : a)
   return (
     <aside className="fnl-aside">
       <div className="fnl-aside-head">
@@ -211,13 +214,26 @@ function EtapasTable({ canal }) {
   )
 }
 
+function UserAvatar({ user, className = 'avatar' }) {
+  if (user?.imageUrl) {
+    return <img className={`${className} avatar-img`} src={user.imageUrl} alt={user.nome} />
+  }
+  const initials = user?.nome?.split(' ').map(w => w[0]).slice(0, 2).join('') || '??'
+  return <div className={className} style={user?.cor ? { background: user.cor } : {}}>{initials}</div>
+}
+
 export default function AppPV() {
   const { data, loading, error, refetch } = usePrevendasData()
-  const [canalId, setCanalId] = useState('linkedin')
+  const [canalId, setCanalId] = useState(null)
+  const authUser = getUserInfo()
 
   const { FUNIS_POR_CANAL = {} } = data ?? {}
-  const canal  = FUNIS_POR_CANAL[canalId] || Object.values(FUNIS_POR_CANAL)[0]
+  const canais = Object.keys(FUNIS_POR_CANAL)
+  const activeCanalId = (canalId && FUNIS_POR_CANAL[canalId]) ? canalId : (canais[0] ?? null)
+  const canal  = activeCanalId ? FUNIS_POR_CANAL[activeCanalId] : null
   const lookup = canal ? Object.fromEntries(canal.etapas.map(e => [e.id, e.v])) : {}
+
+  const mesLabel = new Date().toLocaleString('pt-BR', { month: 'long', year: 'numeric' })
 
   return (
     <DataState loading={loading} error={error} onRetry={refetch}>
@@ -234,15 +250,23 @@ export default function AppPV() {
             <a className="item" href="/vendas.html">Vendas</a>
           </nav>
           <div className="topbar-right">
-            <button className="btn-icon" title="Notificações"><Icon name="bell" /></button>
-            <button className="btn-icon" title="Configurações"><Icon name="settings" /></button>
-            <div className="user">
-              <div className="avatar">AM</div>
-              <div className="who">
-                <div className="name">Ana Martins</div>
-                <div className="role">Gerente comercial</div>
+            <button className="btn-reload" onClick={refetch} title="Recarregar dados">
+              <Icon name="refresh" size={13} />
+              Recarregar
+            </button>
+            {authUser ? (
+              <div className="user">
+                <UserAvatar user={authUser} className="avatar" />
+                <div className="who">
+                  <div className="name">{authUser.nome}</div>
+                  <div className="role">{authUser.cargo}</div>
+                </div>
               </div>
-            </div>
+            ) : (
+              <button className="btn-login-top" onClick={() => { window.location.href = '/login.html' }}>
+                Entrar
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -251,7 +275,7 @@ export default function AppPV() {
         <div className="head">
           <div>
             <h1>Pré-vendas</h1>
-            <div className="sub">Central de inteligência operacional · conversão por canal · Abril, 2026</div>
+            <div className="sub">Central de inteligência operacional · conversão por canal · {mesLabel}</div>
           </div>
         </div>
 
@@ -264,10 +288,10 @@ export default function AppPV() {
               <button
                 key={c.id}
                 role="tab"
-                aria-selected={canalId === c.id}
-                className={`canal-tab ${canalId === c.id ? 'on' : ''}`}
+                aria-selected={activeCanalId === c.id}
+                className={`canal-tab ${activeCanalId === c.id ? 'on' : ''}`}
                 onClick={() => setCanalId(c.id)}
-                style={canalId === c.id ? { '--cor-acc': c.cor } : {}}
+                style={activeCanalId === c.id ? { '--cor-acc': c.cor } : {}}
               >
                 <span className="canal-dot" style={{ background: c.cor }} />
                 <span className="canal-name">{c.nome}</span>

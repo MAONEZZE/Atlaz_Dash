@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 const FILTER_STORAGE_KEY = 'dashcomp-filters-v1'
 
@@ -155,7 +155,7 @@ function ActiveChips({ filters, onClear, onClearAll }) {
 
 function PillSelect({ icon, label, value, opts, onChange, width }) {
   const [open, setOpen] = useState(false)
-  const rootRef = { current: null }
+  const rootRef = useRef(null)
   const active = value !== opts[0][0]
 
   useEffect(() => {
@@ -169,7 +169,7 @@ function PillSelect({ icon, label, value, opts, onChange, width }) {
   return (
     <div
       className={`fbar-pill ${active ? 'is-active' : ''} ${open ? 'is-open' : ''}`}
-      ref={el => { rootRef.current = el }}
+      ref={rootRef}
       style={{ minWidth: width }}
     >
       <button className="fbar-pill-btn" onClick={() => setOpen(!open)}>
@@ -270,9 +270,7 @@ function AdvancedDrawer({ open, onClose, filters, onUpdate }) {
         </div>
         <footer className="fbar-drawer-foot">
           <button className="fbar-btn-ghost" onClick={() => {
-            ['produto', 'etapa', 'status', 'tipoReceita', 'ticketFaixa', 'atividade'].forEach(k => {
-              onUpdate({ [k]: k === 'etapa' ? 'todas' : 'todos' })
-            })
+            onUpdate({ produto: 'todos', etapa: 'todas', status: 'todos', tipoReceita: 'todos', ticketFaixa: 'todos', atividade: 'todos' })
           }}>Limpar avançados</button>
           <button className="fbar-btn-primary" onClick={onClose}>Aplicar</button>
         </footer>
@@ -288,7 +286,7 @@ const FIcon = {
   sliders:  <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M2 4h10M2 8h7M2 12h4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /><circle cx="12" cy="4" r="1.5" fill="currentColor" /><circle cx="9" cy="8" r="1.5" fill="currentColor" /><circle cx="6" cy="12" r="1.5" fill="currentColor" /></svg>,
 }
 
-export function FilterBar({ children }) {
+export function FilterBar({ children, hideCanal = false }) {
   const [filters, update, reset] = useFilters()
   const [advOpen, setAdvOpen] = useState(false)
 
@@ -308,7 +306,7 @@ export function FilterBar({ children }) {
       <div className="fbar-main">
         <PeriodSeg value={filters.period} onChange={v => update({ period: v })} />
         <div className="fbar-div" />
-        <PillSelect icon={FIcon.channel} label="Canal"  value={filters.canal}       opts={OPT_CANAL} onChange={v => update({ canal: v })}       width={170} />
+        {!hideCanal && <PillSelect icon={FIcon.channel} label="Canal"  value={filters.canal}       opts={OPT_CANAL} onChange={v => update({ canal: v })}       width={170} />}
         <PillSelect icon={FIcon.user}    label="Resp."  value={filters.responsavel} opts={OPT_RESP}  onChange={v => update({ responsavel: v })} width={180} />
         <div className="fbar-spacer" />
         <button
